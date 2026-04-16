@@ -1,34 +1,24 @@
-solved
-
-# Build artifacts (user-space)
+# Binaries
 boilerplate/engine
 boilerplate/memory_hog
 boilerplate/cpu_hog
 boilerplate/io_pulse
-
-# Kernel module build artifacts
-*.ko
-*.o
-*.mod
-*.mod.c
-Module.symvers
-modules.order
-*.cmd
-.tmp_versions/
-
-# Root filesystems
-rootfs-base/
-rootfs-*/
-*.tar.gz
+boilerplate/*.o
+boilerplate/*.ko
+boilerplate/*.mod*
+boilerplate/*.symvers
+boilerplate/*.order
 
 # Logs
-*.log
-logs/
+boilerplate/logs/
+boilerplate/*.log
 
-# Runtime socket
+# Root Filesystems (DO NOT COMMIT)
+rootfs-base/
+rootfs-alpha/
+rootfs-beta/
+alpine-minirootfs-*.tar.gz
+
+# System
 /tmp/mini_runtime.sock
-
-# Editor / OS junk
-*.swp
-*~
-.vscode/
+.DS_Store
