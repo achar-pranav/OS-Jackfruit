@@ -366,7 +366,7 @@ void *producer_thread(void *arg)
     while ((n = read(args->pipe_fd, chunk, sizeof(chunk))) > 0) {
         log_item_t item;
         memset(&item, 0, sizeof(item));
-        strncpy(item.container_id, args->id, CONTAINER_ID_LEN - 1);
+        snprintf(item.container_id, sizeof(item.container_id), "%s", args->id);
         item.length = n;
         memcpy(item.data, chunk, n);
         
@@ -453,7 +453,7 @@ int register_with_monitor(int monitor_fd,
     req.pid = host_pid;
     req.soft_limit_bytes = soft_limit_bytes;
     req.hard_limit_bytes = hard_limit_bytes;
-    strncpy(req.container_id, container_id, sizeof(req.container_id) - 1);
+    snprintf(req.container_id, sizeof(req.container_id), "%s", container_id);
 
     if (ioctl(monitor_fd, MONITOR_REGISTER, &req) < 0)
         return -1;
@@ -467,7 +467,7 @@ int unregister_from_monitor(int monitor_fd, const char *container_id, pid_t host
 
     memset(&req, 0, sizeof(req));
     req.pid = host_pid;
-    strncpy(req.container_id, container_id, sizeof(req.container_id) - 1);
+    snprintf(req.container_id, sizeof(req.container_id), "%s", container_id);
 
     if (ioctl(monitor_fd, MONITOR_UNREGISTER, &req) < 0)
         return -1;
@@ -535,6 +535,7 @@ static void handle_sigchld(int sig)
 
 static void handle_sigterm(int sig)
 {
+    (void)sig;
     if (g_ctx) g_ctx->should_stop = 1;
 }
 
@@ -593,7 +594,7 @@ static int run_supervisor(const char *base_rootfs)
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, CONTROL_PATH, sizeof(addr.sun_path) - 1);
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", CONTROL_PATH);
 
     if (bind(ctx.server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("bind");
@@ -655,7 +656,7 @@ static int run_supervisor(const char *base_rootfs)
                 pthread_mutex_lock(&ctx.metadata_lock);
                 
                 container_record_t *new_rec = malloc(sizeof(container_record_t));
-                strncpy(new_rec->id, req.container_id, CONTAINER_ID_LEN - 1);
+                snprintf(new_rec->id, sizeof(new_rec->id), "%s", req.container_id);
                 new_rec->state = CONTAINER_STARTING;
                 new_rec->started_at = time(NULL);
                 new_rec->soft_limit_bytes = req.soft_limit_bytes;
@@ -670,9 +671,9 @@ static int run_supervisor(const char *base_rootfs)
                 }
 
                 child_config_t *c_config = malloc(sizeof(child_config_t));
-                strncpy(c_config->id, req.container_id, CONTAINER_ID_LEN - 1);
-                strncpy(c_config->rootfs, req.rootfs, PATH_MAX - 1);
-                strncpy(c_config->command, req.command, CHILD_COMMAND_LEN - 1);
+                snprintf(c_config->id, sizeof(c_config->id), "%s", req.container_id);
+                snprintf(c_config->rootfs, sizeof(c_config->rootfs), "%s", req.rootfs);
+                snprintf(c_config->command, sizeof(c_config->command), "%s", req.command);
                 c_config->nice_value = req.nice_value;
                 
                 // For Task 1, we can just use a dummy pipe or stdout for now
@@ -712,7 +713,7 @@ static int run_supervisor(const char *base_rootfs)
 
                         // Start producer thread to read from pipefds[0]
                         producer_args_t *p_args = malloc(sizeof(producer_args_t));
-                        strncpy(p_args->id, req.container_id, CONTAINER_ID_LEN - 1);
+                        snprintf(p_args->id, sizeof(p_args->id), "%s", req.container_id);
                         p_args->pipe_fd = pipefds[0];
                         p_args->buffer = &ctx.log_buffer;
                         pthread_t pt;
@@ -801,7 +802,7 @@ static int send_control_request(const control_request_t *req)
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, CONTROL_PATH, sizeof(addr.sun_path) - 1);
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", CONTROL_PATH);
 
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("connect to supervisor (is it running?)");
@@ -845,9 +846,9 @@ static int cmd_start(int argc, char *argv[])
 
     memset(&req, 0, sizeof(req));
     req.kind = CMD_START;
-    strncpy(req.container_id, argv[2], sizeof(req.container_id) - 1);
-    strncpy(req.rootfs, argv[3], sizeof(req.rootfs) - 1);
-    strncpy(req.command, argv[4], sizeof(req.command) - 1);
+    snprintf(req.container_id, sizeof(req.container_id), "%s", argv[2]);
+    snprintf(req.rootfs, sizeof(req.rootfs), "%s", argv[3]);
+    snprintf(req.command, sizeof(req.command), "%s", argv[4]);
     req.soft_limit_bytes = DEFAULT_SOFT_LIMIT;
     req.hard_limit_bytes = DEFAULT_HARD_LIMIT;
 
@@ -870,9 +871,9 @@ static int cmd_run(int argc, char *argv[])
 
     memset(&req, 0, sizeof(req));
     req.kind = CMD_RUN;
-    strncpy(req.container_id, argv[2], sizeof(req.container_id) - 1);
-    strncpy(req.rootfs, argv[3], sizeof(req.rootfs) - 1);
-    strncpy(req.command, argv[4], sizeof(req.command) - 1);
+    snprintf(req.container_id, sizeof(req.container_id), "%s", argv[2]);
+    snprintf(req.rootfs, sizeof(req.rootfs), "%s", argv[3]);
+    snprintf(req.command, sizeof(req.command), "%s", argv[4]);
     req.soft_limit_bytes = DEFAULT_SOFT_LIMIT;
     req.hard_limit_bytes = DEFAULT_HARD_LIMIT;
 
@@ -914,7 +915,7 @@ static int cmd_logs(int argc, char *argv[])
 
     memset(&req, 0, sizeof(req));
     req.kind = CMD_LOGS;
-    strncpy(req.container_id, argv[2], sizeof(req.container_id) - 1);
+    snprintf(req.container_id, sizeof(req.container_id), "%s", argv[2]);
 
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) return 1;
@@ -922,7 +923,7 @@ static int cmd_logs(int argc, char *argv[])
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, CONTROL_PATH, sizeof(addr.sun_path) - 1);
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", CONTROL_PATH);
 
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         close(fd);
@@ -963,7 +964,7 @@ static int cmd_stop(int argc, char *argv[])
 
     memset(&req, 0, sizeof(req));
     req.kind = CMD_STOP;
-    strncpy(req.container_id, argv[2], sizeof(req.container_id) - 1);
+    snprintf(req.container_id, sizeof(req.container_id), "%s", argv[2]);
 
     return send_control_request(&req);
 }
